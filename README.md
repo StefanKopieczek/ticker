@@ -1,7 +1,7 @@
 ticker
 ======
 
-Unofficial Yahoo finance API wrapper (V0.12)
+Unofficial Yahoo finance API wrapper (V0.13)
 
 Currently under development:
 

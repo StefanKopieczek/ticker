@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='ticker',
-      version='0.12',
+      version='0.13',
       description='Yahoo finance wrapper for stock information',
       url='http://github.com/stefankopieczek/ticker',
       author='Stefan Kopieczek',
@@ -9,7 +9,7 @@ setup(name='ticker',
       license='LGPL 2.0',
       packages=['ticker'],
       install_requires=[
-          'bs4',
+          'BeautifulSoup4',
           'requests',
       ],
       zip_safe=False)
