@@ -1,6 +1,5 @@
 import requests
 import re
-import sys
 
 from bs4 import BeautifulSoup
 
@@ -26,11 +25,11 @@ def company(symbol):
 
     if 'bid' in result:
         # Split out e.g. "307.52 x 100" into two separate fields.
-        result['bid'], result['bid_volume'] = __parse_bid_ask(result['bid'])
+        result['bid'], result['bid_size'] = __parse_bid_ask(result['bid'])
 
     if 'ask' in result:
         # Split out e.g. "307.52 x 100" into two separate fields.
-        result['ask'], result['ask_volume'] = __parse_bid_ask(result['ask'])
+        result['ask'], result['ask_size'] = __parse_bid_ask(result['ask'])
 
     try:
         currency_block = soup.find_all(
@@ -93,10 +92,10 @@ def __parse_summary_row(field, value):
 
 
 def __parse_bid_ask(full_str):
-    value, volume = full_str.split("x")
+    value, size = full_str.split("x")
     value = value.strip()
-    volume = volume.strip()
-    return (value, volume)
+    size = size.strip()
+    return (value, size)
 
 
 def __parse_currency_block(currency_str):
