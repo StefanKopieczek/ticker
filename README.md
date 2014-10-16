@@ -20,6 +20,8 @@ Query for stock info on a company via:
 
 This will return a dictionary with the following items:
 
+* 'currency' - The currency in which prices are given, e.g. 'usd' or 'gpb'.
+
 * 'day_range' - The range of prices the stock has taken throughout the trading
                 day, as a pair of floats (lowest_price, highest_price).
 
@@ -27,7 +29,9 @@ This will return a dictionary with the following items:
 
 * 'earnings_per_share' - The EPS value, as a float
 
-* 'market_cap' - The market valuation of the company's equity; equivalently,                            the total value of the company's stock. Stored as a float.               
+* 'market_cap' - The market valuation of the company's equity; equivalently,                            
+                 the total value of the company's stock. Stored as a float.               
+
 * 'next_earnings_date' - The next date that the company will file its quarterly
                          statement. Stored as a datetime.date object.
 
@@ -60,4 +64,3 @@ This will return a dictionary with the following items:
            propensity to respond to market movement). Stored as a float.
 
 * 'profit_over_equity' - As name, profit divided by equity. Stored as a float.
-
