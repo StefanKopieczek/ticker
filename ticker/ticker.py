@@ -105,6 +105,3 @@ def __parse_currency_block(currency_str):
         return match.group(1).lower()
     else:
         return None
-
-if __name__ == "__main__":
-    print company(sys.argv[1])
