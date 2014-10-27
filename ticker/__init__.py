@@ -1,1 +1,1 @@
-from ticker import company
+from ticker import company_query

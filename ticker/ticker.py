@@ -1,6 +1,7 @@
 import requests
 import re
 
+from itertools import izip
 from bs4 import BeautifulSoup
 
 import ticker_api
@@ -10,53 +11,79 @@ class ParseError(Exception):
     pass
 
 
-def company(symbol):
-    result = {}
-    r = requests.get(ticker_api.COMPANY['url'] % symbol)
-    data = r.text
-    soup = BeautifulSoup(data)
-    tables = soup.find_all(id=ticker_api.COMPANY['div_id'])
+def company_query(symbols, fields=None):
+    results = {}
 
-    for table in tables:
-        for row in table.find_all('tr'):
-            header, cell = row.th.get_text(), row.td.get_text()
-            field, value = __parse_summary_row(header, cell)
-            result[field] = value
+    query_fields = None
+    derived_fields = None
+    if fields is None:
+        query_fields = ticker_api.COMPANY['query_fields'].keys()
+        derived_fields = ticker_api.COMPANY['derived_fields'].keys()
+        fields = query_fields + derived_fields
+    else:
+        query_fields = [field for field in fields
+                        if field in ticker_api.COMPANY['query_fields']]
 
-    if 'bid' in result:
-        # Split out e.g. "307.52 x 100" into two separate fields.
-        result['bid'], result['bid_size'] = __parse_bid_ask(result['bid'])
+        derived_fields = [field for field in fields
+                          if field in ticker_api.COMPANY['derived_fields']]
 
-    if 'ask' in result:
-        # Split out e.g. "307.52 x 100" into two separate fields.
-        result['ask'], result['ask_size'] = __parse_bid_ask(result['ask'])
+    # Ensure that whenever we request a derived stat, we also request the stats
+    # on which it depends.
+    queried_fields = set(query_fields)
+    for field in derived_fields:
+        required = ticker_api.COMPANY['derived_fields'][field].prerequisites
+        for prerequisite in required:
+            if prerequisite not in queried_fields:
+                queried_fields.add(prerequisite)
 
-    try:
-        currency_block = soup.find_all(
-            id=ticker_api.COMPANY['currency_block_id'])[0].get_text()
+    # Build the URL parameters for the query.
+    params = {
+        's': ' '.join(symbols),
+        'f': ''.join((ticker_api.COMPANY['query_fields'][field].key
+                      for field in query_fields))
+    }
 
-        result['currency'] = __parse_currency_block(currency_block)
-    except IndexError:
-        result['currency'] = None
+    # Obtain the CSV data from Yahoo. Split by company and field, producing:
+    # {company_symbol : {stat_name : stat_value}}
+    r = requests.get(ticker_api.COMPANY['url'], params=params, stream=True)
+    lines = (line.strip() for line in r.text.split('\n') if line is not u'')
+    for idx, line in enumerate(lines):
+        results[symbols[idx]] = {symbol: value.strip() for (symbol, value) in
+                                 izip(fields, line.split(','))}
 
-    final = {}
-    for field, value in result.iteritems():
-        if field in ticker_api.FIELD_MAP:
-            # Apply overrides to remap the scraped key names; e.g. we map
-            # 'wk_range' to 'week_range'.
-            field = ticker_api.FIELD_MAP[field]
+    requested_fields = set(fields)
+    hidden_fields = requested_fields - queried_fields
 
-        if field in ticker_api.PARSERS:
-            # If we know how to parse the value from a string into a native
-            # type, do so (e.g. convert share prices to floats).
-            try:
-                value = ticker_api.PARSERS[field](value)
-            except ValueError:
-                value = None
+    # Parse the stat_values out of their string representations into the
+    # correct formats.
+    for company, stats in results.iteritems():
+        for field, value in stats.iteritems():
+            if field in ticker_api.COMPANY['query_fields']:
+                stats[field] = ticker_api.COMPANY['query_fields'][field].parser(
+                    value)
 
-        final[field] = value
+        # Calculate any derived values based on the query results.
+        for field in derived_fields:
+            stats[field] = None
+            stat = ticker_api.COMPANY['derived_fields'][field]
+            for prerequisite in stat.prerequisites:
+                if stats[prerequisite] is None:
+                    break
+            else:
+                stats[field] = stat(stats)
 
-    return final
+        # Remove any stats needed for a derived value which the user did not
+        # originally request.
+        for field in hidden_fields:
+            del stats[field]
+
+    # Remove any stats needed for a derived value which the user did not
+    # originally request.
+    unrequested = set(stats.keys()) - (queried_fields | set(derived_fields))
+    for field in unrequested:
+        del stats[field]
+
+    return results
 
 
 def index(name):

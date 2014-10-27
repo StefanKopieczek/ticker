@@ -1,16 +1,6 @@
 import datetime
 
 
-def parse_float_range(range_str):
-    """Parse a string of the form "a - b" into a pair of the form
-       (float(a), float(b)"""
-    split_range = range_str.split('-')
-    try:
-        return (float(split_range[0]), float(split_range[1]))
-    except IndexError as e:
-        raise ValueError(e)
-
-
 def parse_int(int_str):
     """Parse a string of the form 1,234,567b into a Python integer.
        The terminal letter, if present, indicates e.g. billions."""
@@ -20,7 +10,10 @@ def parse_int(int_str):
     if factor != 1:
         int_str = int_str[:-1]
 
-    return int(int_str.replace(',', '')) * factor
+    try:
+        return int(int_str.replace(',', '')) * factor
+    except ValueError:
+        return None
 
 
 def parse_float(float_str):
@@ -30,7 +23,32 @@ def parse_float(float_str):
     if factor != 1:
         float_str = float_str[:-1]
 
-    return float(float_str.replace(',', '')) * factor
+    try:
+        return float(float_str.replace(',', '')) * factor
+    except ValueError:
+        return None
+
+
+def parse_float_pc(float_str):
+    if len(float_str) == 0:
+        return None
+    elif float_str[-1] == '%':
+        return parse_float(float_str[:-1])
+    else:
+        return parse_float(float_str)
+
+
+def parse_date(date_str):
+    """Parse a date of the form 23-Oct-14 into a Python date object."""
+    try:
+        return datetime.datetime.strptime(date_str, "%d-%b-%y").date()
+    except ValueError:
+        return None
+
+
+def parse_time(time_str):
+    # TODO
+    return None
 
 
 def __get_factor(num_str):
@@ -42,8 +60,3 @@ def __get_factor(num_str):
         return 1000
 
     return 1
-
-
-def parse_date(date_str):
-    """Parse a date of the form 23-Oct-14 into a Python date object."""
-    return datetime.datetime.strptime(date_str, "%d-%b-%y").date()
